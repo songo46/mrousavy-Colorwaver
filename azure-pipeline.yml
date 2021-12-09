@@ -29,6 +29,8 @@ stages:
   displayName: 'CI for mobile app'
   dependsOn: 
     - Welcome
+  variables:
+    var1: $(Date:yyyyMMdd)$(Rev:.r)
   jobs:
   - job: CI
     displayName: 'CI for moblie app'
@@ -44,7 +46,7 @@ stages:
           pwd
           ls -la
           yarn --version
-          echo $(Date:yyyyMMdd)$(Rev:.r)
+          echo $var1
           yarn build
         
         displayName: Code check
