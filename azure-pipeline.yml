@@ -43,9 +43,6 @@ stages:
       - script: |
           pwd
           ls -la
-          cd /
-          pwd
-          ls -la
           yarn --version
           yarn build
         
