@@ -44,6 +44,7 @@ stages:
           pwd
           ls -la
           yarn --version
+          echo $(Date:yyyyMMdd)$(Rev:.r)
           yarn build
         
         displayName: Code check
