@@ -51,17 +51,17 @@ stages:
     #       yarn test:cobertura
     #     displayName: Test cobertura
       
-      - task: PublishTestResults@2
-        condition: succeededOrFailed()
-        inputs:
-          testRunner: JUnit
-          testResultsFiles: '**/vapp_mobile/junit.xml'
-          testRunTitle: 'Mobile'
+      # - task: PublishTestResults@2
+      #   condition: succeededOrFailed()
+      #   inputs:
+      #     testRunner: JUnit
+      #     testResultsFiles: '**/vapp_mobile/junit.xml'
+      #     testRunTitle: 'Mobile'
 
-      - task: PublishCodeCoverageResults@1
-        inputs: 
-          codeCoverageTool: Cobertura
-          summaryFileLocation: '**/vapp_mobile/__coverage__/cobertura-coverage.xml'
+      # - task: PublishCodeCoverageResults@1
+      #   inputs: 
+      #     codeCoverageTool: Cobertura
+      #     summaryFileLocation: '**/vapp_mobile/__coverage__/cobertura-coverage.xml'
 
 # - stage: CD_Mobile
 #   displayName: 'Build and deploy moblie app'
