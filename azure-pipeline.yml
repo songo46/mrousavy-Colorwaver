@@ -41,8 +41,9 @@ stages:
         displayName: 'Install Node.js'
 
       - script: |
-        
+          pwd
           yarn --version
+          yarn code:check
         
         displayName: Code check
 
