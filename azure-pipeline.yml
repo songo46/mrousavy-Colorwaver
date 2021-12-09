@@ -1,1 +1,800 @@
+# Node.js with React
+# Build a Node.js project that uses React.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
 
+# Only trigger CI on master
+trigger:
+ branches:
+   include:
+   - '*'
+
+# Enable PR trigger
+pr:
+  branches:
+    include:
+    - '*'
+stages:
+
+- stage: Welcome
+  jobs:
+    - job: Welcome
+      displayName: "Welcome to test yarn"
+      pool:
+        vmImage: 'ubuntu-18.04'
+      steps:
+        - script: echo 'Welcome to Virbac'
+
+- stage: CI_Mobile
+  displayName: 'CI for mobile app'
+  dependsOn: 
+    - Welcome
+  jobs:
+  - job: CI
+    displayName: 'CI for moblie app'
+    pool:
+      vmImage: 'ubuntu-18.04'
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '10.x'
+        displayName: 'Install Node.js'
+
+      - script: |
+        
+          yarn --version
+        
+        displayName: Code check
+
+    #   - script: |
+    #       cd ./vapp_mobile
+    #       yarn test:cobertura
+    #     displayName: Test cobertura
+      
+      - task: PublishTestResults@2
+        condition: succeededOrFailed()
+        inputs:
+          testRunner: JUnit
+          testResultsFiles: '**/vapp_mobile/junit.xml'
+          testRunTitle: 'Mobile'
+
+      - task: PublishCodeCoverageResults@1
+        inputs: 
+          codeCoverageTool: Cobertura
+          summaryFileLocation: '**/vapp_mobile/__coverage__/cobertura-coverage.xml'
+
+# - stage: CD_Mobile
+#   displayName: 'Build and deploy moblie app'
+#   dependsOn:
+#     - CI_Mobile
+#   jobs:
+#   - job: Droidmobile_uat
+#     displayName: 'Build android app for UAT'
+#     condition: and(eq(variables['forceDistribution_mobile_android'], 'true'), eq(variables['ENV'], 'uat'))
+#     pool:
+#       vmImage: 'ubuntu-18.04'
+#     variables:
+#       - group: Vapp_android
+
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+
+#       - task: DownloadSecureFile@1
+#         name: keystore
+#         inputs:
+#           secureFile: 'virbac.keystore'
+
+#       - bash: |
+#           cd ./vapp_mobile/android/app/
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | sed -i -e "s|versionCode 4|versionCode $versionCode_gitID|" ./build.gradle
+#           sed -i -e 's|versionName "0.1.0"|versionName "$(versionName)"|' ./build.gradle
+#           cat ./build.gradle
+#         displayName: Version android app
+        
+#       - script: |
+#           cp $(keystore.secureFilePath) ./vapp_mobile/android/app/
+#           cd vapp_mobile/
+#           yarn setup
+#           sed -i -e "s|prod.api.aws|https://api-app-v0-7-2.virbac-uat.siouxdev.com|" ./.env.production
+#           echo $(STORE_FILE) | sed -i '' -e "s/STORE_FILE_IN_OUR_DOCUMENTATION/$(STORE_FILE)/g" ./android/gradle.properties
+#           echo $(KEY_ALIAS) | sed -i '' -e "s/ALIAS_IS_IN_OUR_DOCUMENTATION/$(KEY_ALIAS)/g" ./android/gradle.properties
+#           echo $(STORE_PASSWORD) | sed '' -i -e "s/PWD_IS_IN_OUR_DOCUMENTATION/$(STORE_PASSWORD)/g" ./android/gradle.properties
+#           echo $(KEY_PASSWORD) | sed -i '' -e "s/PWD_IS_IN_OUR_DOCUMENTATION/$(KEY_PASSWORD)/g" ./android/gradle.properties
+#           yarn android:clean
+#           yarn android:assembleRelease
+#         displayName: Build apk file
+      
+#       - script: |
+#           cd vapp_mobile/
+#           npm install -g firebase-tools
+#           ls ./android/app/build/outputs/apk/release/
+#           firebase --token '$(FIREBASE_TOKEN)' appdistribution:distribute --app 1:988253142923:android:990dd7fd3daf266eefb98e --release-notes "UAT" --groups '$(GROUP_TEST), $(GROUP_UAT_ANDROID)' \
+#             ./android/app/build/outputs/apk/release/app-release.apk
+#         displayName: Deploy to firebase
+
+#   - job: Droidmobile_test
+#     displayName: 'Build android app for testing'
+#     condition: and(eq(variables['forceDistribution_mobile_android'], 'true'), eq(variables['ENV'], 'test'))
+#     pool:
+#       vmImage: 'ubuntu-18.04'
+#     variables:
+#       - group: Vapp_android
+
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+
+#       - task: DownloadSecureFile@1
+#         name: keystore
+#         inputs:
+#           secureFile: 'virbac.keystore'
+
+#       - bash: |
+#           cd ./vapp_mobile/android/app/
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | sed -i -e "s|versionCode 4|versionCode $versionCode_gitID|" ./build.gradle
+#           sed -i -e 's|versionName "0.1.0"|versionName "$(versionName)"|' ./build.gradle
+#           cat ./build.gradle
+#         displayName: Version android app
+        
+#       - script: |
+#           cp $(keystore.secureFilePath) ./vapp_mobile/android/app/ 
+#           cd vapp_mobile/
+#           yarn setup
+#           sed -i -e "s|prod.api.aws|https://api-app-v0-7.virbac-test.siouxdev.com|" ./.env.production
+#           echo $(STORE_FILE) | sed -i '' -e "s/STORE_FILE_IN_OUR_DOCUMENTATION/$(STORE_FILE)/g" ./android/gradle.properties
+#           echo $(KEY_ALIAS) | sed -i '' -e "s/ALIAS_IS_IN_OUR_DOCUMENTATION/$(KEY_ALIAS)/g" ./android/gradle.properties
+#           echo $(STORE_PASSWORD) | sed '' -i -e "s/PWD_IS_IN_OUR_DOCUMENTATION/$(STORE_PASSWORD)/g" ./android/gradle.properties
+#           echo $(KEY_PASSWORD) | sed -i '' -e "s/PWD_IS_IN_OUR_DOCUMENTATION/$(KEY_PASSWORD)/g" ./android/gradle.properties
+#           yarn android:clean
+#           yarn android:assembleRelease
+#         displayName: Build apk file
+      
+#       - script: |
+#           cd vapp_mobile/
+#           npm install -g firebase-tools
+#           ls ./android/app/build/outputs/apk/release/
+#           firebase --token '$(FIREBASE_TOKEN)' appdistribution:distribute --app 1:988253142923:android:990dd7fd3daf266eefb98e --release-notes "internal test" --groups '$(GROUP_TEST)' \
+#             ./android/app/build/outputs/apk/release/app-release.apk
+#         displayName: Deploy to firebase
+
+#   - job: iOSmobile_uat
+#     displayName: 'Build iOS app for UAT'
+#     pool:
+#       vmImage: 'macOS-latest'
+#     variables:
+#       - group: Vapp_iOS
+#       - name: configuration
+#         value: 'Release'
+#       - name: sdk
+#         value: 'iphoneos'
+#     condition: and(eq(variables['forceDistribution_mobile_iOS'], 'true'), eq(variables['ENV'], 'uat'))
+
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+
+#       - script: |
+#           cd ./vapp_mobile
+#           sed -i -e "s|prod.api.aws|https://api-app-v0-7-2.virbac-uat.siouxdev.com|" ./.env.production
+#           cat .env.production
+#           sed -i -e "s|com.virbac.vapp|com.virbac.vapp2|" ./ios/vapp_mobile.xcodeproj/project.pbxproj
+#           yarn setup
+
+#       - task: InstallAppleCertificate@2
+#         inputs:
+#           certSecureFile: 'Virbac_Certificates.p12'
+#           certPwd: '$(p12Password)'
+#           keychain: 'temp'
+        
+#       - task: InstallAppleProvisioningProfile@1
+#         inputs:
+#           provisioningProfileLocation: 'secureFiles'
+#           provProfileSecureFile: 'virbac_adhoc.mobileprovision'
+      
+#       - script: |
+#           cd ./vapp_mobile/ios
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $versionCode_gitID" ./vapp_mobile/Info.plist
+#           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(versionName)" ./vapp_mobile/Info.plist
+#           /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads false" ./vapp_mobile/Info.plist
+#           /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSExceptionDomains" ./vapp_mobile/Info.plist
+#           cat ./vapp_mobile/Info.plist
+
+#       - script: | 
+#           defaults write com.apple.dt.Xcode BuildSystemScheduleInherentlyParallelCommandsExclusively -bool NO
+#           cd ./vapp_mobile/ios
+#           pod install
+      
+#       - task: Xcode@5
+#         inputs:
+#           actions: 'build'
+#           xcWorkspacePath: 'vapp_mobile/ios/vapp_mobile.xcworkspace'
+#           scheme: 'vapp_mobile.production'
+#           xcodeVersion: 'specifyPath'
+#           xcodeDeveloperDir: '/Applications/Xcode_11.6.app'
+#           packageApp: true
+#           signingOption: 'manual'
+#           signingIdentity: '$(APPLE_CERTIFICATE_SIGNING_IDENTITY)'
+#           provisioningProfileUuid: '$(APPLE_PROV_PROFILE_UUID)'
+      
+#       - task: PublishPipelineArtifact@1
+#         inputs:
+#           targetPath: ./output/iphoneos/Release/
+#           artifact: 'vapp_mobile.production.$(versionName).ipa'
+#           publishLocation: 'pipeline'
+
+#       - script: |
+#           npm install -g firebase-tools
+#           firebase --token '$(FIREBASE_TOKEN)' appdistribution:distribute --app 1:988253142923:ios:9cc9991ace54fb2aefb98e --release-notes "UAT" --groups '$(GROUP_TEST), $(GROUP_UAT_IOS)' \
+#             ./output/iphoneos/Release/*.ipa
+#         displayName: Deploy to firebase
+
+#   - job: iOSmobile_test
+#     displayName: 'Build iOS app for testing'
+#     pool:
+#       vmImage: 'macOS-latest'
+#     variables:
+#       - group: Vapp_iOS
+#       - name: configuration
+#         value: 'Release'
+#       - name: sdk
+#         value: 'iphoneos'
+#     condition: and(eq(variables['forceDistribution_mobile_iOS'], 'true'), eq(variables['ENV'], 'test'))
+
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+
+#       - script: |
+#           cd ./vapp_mobile
+#           sed -i -e "s|prod.api.aws|https://api-app-v0-7.virbac-test.siouxdev.com|" ./.env.production
+#           cat .env.production
+#           sed -i -e "s|com.virbac.vapp|com.virbac.vapp2|" ./ios/vapp_mobile.xcodeproj/project.pbxproj
+#           yarn setup
+
+#       - task: InstallAppleCertificate@2
+#         inputs:
+#           certSecureFile: 'Virbac_Certificates.p12'
+#           certPwd: '$(p12Password)'
+#           keychain: 'temp'
+        
+#       - task: InstallAppleProvisioningProfile@1
+#         inputs:
+#           provisioningProfileLocation: 'secureFiles'
+#           provProfileSecureFile: 'virbac_adhoc.mobileprovision'
+      
+#       - script: |
+#           cd ./vapp_mobile/ios
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $versionCode_gitID" ./vapp_mobile/Info.plist
+#           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(versionName)" ./vapp_mobile/Info.plist
+#           /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads false" ./vapp_mobile/Info.plist
+#           /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSExceptionDomains" ./vapp_mobile/Info.plist
+#           cat ./vapp_mobile/Info.plist
+
+#       - script: | 
+#           defaults write com.apple.dt.Xcode BuildSystemScheduleInherentlyParallelCommandsExclusively -bool NO
+#           cd ./vapp_mobile/ios
+#           pod install
+      
+#       - task: Xcode@5
+#         inputs:
+#           actions: 'build'
+#           xcWorkspacePath: 'vapp_mobile/ios/vapp_mobile.xcworkspace'
+#           scheme: 'vapp_mobile.production'
+#           xcodeVersion: 'specifyPath'
+#           xcodeDeveloperDir: '/Applications/Xcode_11.6.app'
+#           packageApp: true
+#           signingOption: 'manual'
+#           signingIdentity: '$(APPLE_CERTIFICATE_SIGNING_IDENTITY)'
+#           provisioningProfileUuid: '$(APPLE_PROV_PROFILE_UUID)'
+
+#       - task: PublishPipelineArtifact@1
+#         inputs:
+#           targetPath: ./output/iphoneos/Release/
+#           artifact: 'vapp_mobile.production.$(versionName).ipa'
+#           publishLocation: 'pipeline'
+
+#       - script: |
+#           npm install -g firebase-tools
+#           firebase --token '$(FIREBASE_TOKEN)' appdistribution:distribute --app 1:988253142923:ios:9cc9991ace54fb2aefb98e --release-notes "internal test" --groups '$(GROUP_TEST)' \
+#             ./output/iphoneos/Release/*.ipa
+#         displayName: Deploy to firebase
+
+# - stage: CI_Backend
+#   displayName: 'CI for backend'
+#   dependsOn: 
+#     - Welcome
+#   pool:
+#     vmImage: 'ubuntu-18.04'
+#   jobs:
+#   - job: CI
+#     displayName: 'CI for backend'        
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+
+#       - script: |
+#           cp -avr ./vapp_shared ./vapp_back_end/
+#           cp -avr ./vapp_domain_shared ./vapp_back_end/
+#           cd ./vapp_back_end
+#           yarn unlink vapp_shared
+#           yarn unlink vapp_domain_shared
+#           yarn install
+#         displayName: Setup
+      
+#       - script: |
+#           cd ./vapp_back_end
+#           yarn code:check
+#         displayName: Code check
+        
+#       - script: |
+#           cd ./vapp_back_end
+#           yarn test:cobertura
+#         displayName: Test cobertura
+
+#       - task: PublishTestResults@2
+#         condition: succeededOrFailed()
+#         inputs:
+#           testRunner: JUnit
+#           testResultsFiles: '**/vapp_back_end/junit.xml'
+#           testRunTitle: 'Backend'
+
+#       - task: PublishCodeCoverageResults@1
+#         inputs: 
+#           codeCoverageTool: Cobertura
+#           summaryFileLocation: '**/vapp_back_end/__coverage__/cobertura-coverage.xml'
+
+# - stage: CD_Backend
+#   displayName: 'Build and deploy backend'
+#   dependsOn: 
+#     - CI_Backend
+#   pool:
+#     vmImage: 'ubuntu-18.04'
+#   variables:
+#     - group: Docker
+#   jobs:
+#   - job: Backend_cms_uat
+#     displayName: 'Build and deploy api for cms UAT'
+#     condition: and(eq(variables['forceDistribution_backend_cms'], 'true'), eq(variables['ENV'], 'uat'))
+#     steps:
+      
+#       - bash: |
+#           cd ./vapp_back_end/src/config/
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | sed -i -e 's|'0.1.1'|'$(versionName).$versionCode_gitID'|' ./default.json
+#           cat ./default.json
+#         displayName: Version backend_cms uat
+
+#       - script: |
+#           cp -avr ./vapp_shared ./vapp_back_end/
+#           cp -avr ./vapp_domain_shared ./vapp_back_end/
+#           cd ./vapp_back_end
+#           yarn unlink vapp_shared
+#           yarn unlink vapp_domain_shared
+#           yarn install
+#           yarn cms:uatBuild
+#         displayName: Build backend_cms
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_back_end
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_api_cms_uat:$(Build.BuildId) .
+#           docker build -t siouxdocker/vapp_api_cms_uat:latest .
+#           docker push siouxdocker/vapp_api_cms_uat:latest
+#           docker push siouxdocker/vapp_api_cms_uat:$(Build.BuildId)
+#         displayName: Build and deploy backend image
+      
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-uat'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_api_cms_uat;docker-compose up -d --build backend-cms 2> docker-compose-backend_cms.log;docker system prune -f'
+#           readyTimeout: '20000'
+
+#   - job: Backend_app_uat
+#     displayName: 'Build and deploy api for app UAT'
+#     condition: and(eq(variables['forceDistribution_backend_app'], 'true'), eq(variables['ENV'], 'uat'))
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+    
+#       - bash: |
+#           cd ./vapp_back_end/src/config/
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | sed -i -e 's|'0.1.0'|'$(versionName).$versionCode_gitID'|' ./default.json
+#           cat ./default.json
+#         displayName: Version backend_app uat
+
+#       - script: |
+#           cp -avr ./vapp_shared ./vapp_back_end/
+#           cp -avr ./vapp_domain_shared ./vapp_back_end/
+#           cd ./vapp_back_end
+#           yarn unlink vapp_shared
+#           yarn unlink vapp_domain_shared
+#           yarn install
+#           yarn app:uatBuild
+#         displayName: Build backend_app
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_back_end
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_api_app_uat:$(Build.BuildId) -f Dockerfile.app .
+#           docker build -t siouxdocker/vapp_api_app_uat:latest -f Dockerfile.app .
+#           docker push siouxdocker/vapp_api_app_uat:latest
+#           docker push siouxdocker/vapp_api_app_uat:$(Build.BuildId)
+#         displayName: Build and deploy backend image
+      
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-uat'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_api_app_uat;docker-compose up -d --build backend-app 2> docker-compose-backend_app.log;docker system prune -f'
+#           readyTimeout: '20000'
+      
+#   - job: Backend_app_test
+#     displayName: 'Build and deploy api for app test'
+#     condition: and(eq(variables['forceDistribution_backend_app'], 'true'), eq(variables['ENV'], 'test'))
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+    
+#       - bash: |
+#           cd ./vapp_back_end/src/config/
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | sed -i -e 's|'0.1.0'|'$(versionName).$versionCode_gitID'|' ./default.json
+#           cat ./default.json
+#         displayName: Version backend_app test
+
+#       - script: |
+#           cp -avr ./vapp_shared ./vapp_back_end/
+#           cp -avr ./vapp_domain_shared ./vapp_back_end/
+#           cd ./vapp_back_end
+#           yarn unlink vapp_shared
+#           yarn unlink vapp_domain_shared
+#           yarn install
+#           yarn app:testBuild
+#         displayName: Build backend_app
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_back_end
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_api_app_test:$(Build.BuildId) -f Dockerfile.app .
+#           docker build -t siouxdocker/vapp_api_app_test:latest -f Dockerfile.app .
+#           docker push siouxdocker/vapp_api_app_test:latest
+#           docker push siouxdocker/vapp_api_app_test:$(Build.BuildId)
+#         displayName: Build and deploy backend test image
+      
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-internal-test'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_api_app_test;docker-compose up -d --build backend-app 2> docker-compose-backend_app.log;docker system prune -f'
+#           readyTimeout: '20000'
+    
+#   - job: Backend_cms_test
+#     displayName: 'Build and deploy api for cms test'
+#     condition: and(eq(variables['forceDistribution_backend_cms'], 'true'), eq(variables['ENV'], 'test'))
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+    
+#       - bash: |
+#           cd ./vapp_back_end/src/config/
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | sed -i -e 's|'0.1.1'|'$(versionName).$versionCode_gitID'|' ./default.json
+#           cat ./default.json
+#         displayName: Version backend_cms test
+
+#       - script: |
+#           cp -avr ./vapp_shared ./vapp_back_end/
+#           cp -avr ./vapp_domain_shared ./vapp_back_end/
+#           cd ./vapp_back_end
+#           yarn unlink vapp_shared
+#           yarn unlink vapp_domain_shared
+#           yarn install
+#           yarn cms:testBuild
+#         displayName: Build backend_app
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_back_end
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_api_cms_test:$(Build.BuildId) .
+#           docker build -t siouxdocker/vapp_api_cms_test:latest .
+#           docker push siouxdocker/vapp_api_cms_test:latest
+#           docker push siouxdocker/vapp_api_cms_test:$(Build.BuildId)
+#         displayName: Build and deploy backend test image
+      
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-internal-test'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_api_cms_test;docker-compose up -d --build backend-cms 2> docker-compose-backend_cms.log;docker system prune -f'
+#           readyTimeout: '20000'
+      
+#   - job: Backend_app_dev
+#     displayName: 'Build and deploy api for app dev'
+#     condition: or(and(eq(variables['forceDistribution_backend_app'], 'true'), eq(variables['ENV'], 'dev')),eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+    
+#       - script: |
+#           cp -avr ./vapp_shared ./vapp_back_end/
+#           cp -avr ./vapp_domain_shared ./vapp_back_end/
+#           cd ./vapp_back_end
+#           yarn unlink vapp_shared
+#           yarn unlink vapp_domain_shared
+#           yarn install
+#           yarn app:devBuild
+#         displayName: Build backend_app
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_back_end
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_api_app_dev:$(Build.BuildId) -f Dockerfile.app .
+#           docker build -t siouxdocker/vapp_api_app_dev:latest -f Dockerfile.app .
+#           docker push siouxdocker/vapp_api_app_dev:latest
+#           docker push siouxdocker/vapp_api_app_dev:$(Build.BuildId)
+#         displayName: Build and deploy backend dev image
+      
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-dev'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_api_app_dev;docker-compose up -d --build backend-app 2> docker-compose-backend_app.log;docker system prune -f'
+#           readyTimeout: '20000'
+      
+#   - job: Backend_cms_dev
+#     displayName: 'Build and deploy api for cms dev'
+#     condition: or(and(eq(variables['forceDistribution_backend_cms'], 'true'), eq(variables['ENV'], 'dev')),eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+    
+#       - script: |
+#           cp -avr ./vapp_shared ./vapp_back_end/
+#           cp -avr ./vapp_domain_shared ./vapp_back_end/
+#           cd ./vapp_back_end
+#           yarn unlink vapp_shared
+#           yarn unlink vapp_domain_shared
+#           yarn install
+#           yarn cms:devBuild
+#         displayName: Build backend_app
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_back_end
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_api_cms_dev:$(Build.BuildId) .
+#           docker build -t siouxdocker/vapp_api_cms_dev:latest .
+#           docker push siouxdocker/vapp_api_cms_dev:latest
+#           docker push siouxdocker/vapp_api_cms_dev:$(Build.BuildId)
+#         displayName: Build and deploy backend test image
+      
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-dev'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_api_cms_dev;docker-compose up -d --build backend-cms 2> docker-compose-backend_cms.log;docker system prune -f'
+#           readyTimeout: '20000'
+
+# - stage: CI_Cms
+#   displayName: 'CI for cms'
+#   dependsOn: 
+#     - Welcome
+#   pool:
+#     vmImage: 'ubuntu-18.04'
+#   jobs:
+#   - job: CI
+#     displayName: 'CI for cms'
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+      
+#       - script: |
+#           cd ./vapp_cms
+#           yarn setup
+#           yarn code:check
+#         displayName: Code check
+
+#       - script: |
+#           cd ./vapp_cms
+#           yarn test:cobertura
+#         displayName: Test cobertura
+
+#       - task: PublishTestResults@2
+#         condition: succeededOrFailed()
+#         inputs:
+#           testRunner: JUnit
+#           testResultsFiles: '**/vapp_cms/junit.xml'
+#           testRunTitle: 'CMS'
+
+#       - task: PublishCodeCoverageResults@1
+#         inputs: 
+#           codeCoverageTool: Cobertura
+#           summaryFileLocation: '**/vapp_cms/coverage/cobertura-coverage.xml'
+
+# - stage: CD_Cms
+#   displayName: 'Build and deploy CMS'
+#   dependsOn: 
+#     - CI_Cms
+#   pool:
+#     vmImage: 'ubuntu-18.04' 
+#   variables:
+#     - group: Docker
+#   jobs:
+#   - job: Cms_uat
+#     displayName: 'Cms for uat'
+#     condition: and(eq(variables['forceDistribution_cms'], 'true'), eq(variables['ENV'], 'uat'))
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+
+#       - bash: |
+#           cd ./vapp_cms/
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | sed -i -e 's|'0.1.0'|'$(versionName).$versionCode_gitID'|' ./.env
+#           cat ./.env
+#         displayName: Version uat
+
+#       - script: |
+#           cd ./vapp_cms
+#           yarn setup
+#           sed -i -e "s|http://localhost:3000|https://api-cms-v0-7.virbac-uat.siouxdev.com|" ./.env
+#           sed -i -e "s|http://localhost:4000|https://api-app-v0-7-2.virbac-uat.siouxdev.com|" ./.env
+#           cat ./.env
+#           yarn build
+#         displayName: Build cms
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_cms
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_cms_uat:$(Build.BuildId) .
+#           docker build -t siouxdocker/vapp_cms_uat:latest .
+#           docker push siouxdocker/vapp_cms_uat:latest
+#           docker push siouxdocker/vapp_cms_uat:$(Build.BuildId)
+#         displayName: Build and deploy cms prod image
+
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-uat'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_cms_uat:latest;docker-compose up -d --build cms 2> docker-compose-cms.log;docker system prune -f'
+#           readyTimeout: '20000'
+
+#   - job: Cms_test
+#     displayName: 'Cms for testing'
+#     condition: and(eq(variables['forceDistribution_cms'], 'true'), eq(variables['ENV'], 'test'))
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+
+#       - bash: |
+#           cd ./vapp_cms/
+#           versionCode_gitID=$(git rev-list --count $(git rev-parse HEAD))
+#           echo $versionCode_gitID | sed -i -e 's|'0.1.0'|'$(versionName).$versionCode_gitID'|' ./.env
+#           cat ./.env
+#         displayName: Version cms
+
+#       - script: |
+#           cd ./vapp_cms
+#           yarn setup
+#           sed -i -e "s|http://localhost:3000|https://api-cms-v0-7.virbac-test.siouxdev.com|" ./.env
+#           sed -i -e "s|http://localhost:4000|https://api-app-v0-7.virbac-test.siouxdev.com|" ./.env
+#           cat ./.env
+#           yarn build
+#         displayName: Build cms
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_cms
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_cms_test:$(Build.BuildId) .
+#           docker build -t siouxdocker/vapp_cms_test:latest .
+#           docker push siouxdocker/vapp_cms_test:latest
+#           docker push siouxdocker/vapp_cms_test:$(Build.BuildId)
+#         displayName: Build and deploy cms test image
+
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-internal-test'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_cms_test:latest;docker-compose up -d --build cms 2> docker-compose-cms.log;docker system prune -f'
+#           readyTimeout: '20000'
+
+#   - job: Cms_dev
+#     displayName: 'Cms for dev'
+#     condition: or(and(eq(variables['forceDistribution_cms'], 'true'), eq(variables['ENV'], 'dev')),eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+#     steps:
+#       - task: NodeTool@0
+#         inputs:
+#           versionSpec: '10.x'
+#         displayName: 'Install Node.js'
+
+#       - script: |
+#           cd ./vapp_cms
+#           yarn setup
+#           sed -i -e "s|http://localhost:3000|https://api-cms.virbac-dev.siouxdev.com|" ./.env
+#           cat ./.env
+#           yarn build
+#         displayName: Build cms
+
+#       - task: DockerInstaller@0
+#         inputs:
+#           dockerVersion: '19.03.12'
+      
+#       - script: |
+#           cd ./vapp_cms
+#           docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+#           docker build -t siouxdocker/vapp_cms_dev:$(Build.BuildId) .
+#           docker build -t siouxdocker/vapp_cms_dev:latest .
+#           docker push siouxdocker/vapp_cms_dev:latest
+#           docker push siouxdocker/vapp_cms_dev:$(Build.BuildId)
+#         displayName: Build and deploy cms dev image
+
+#       - task: SSH@0
+#         inputs:
+#           sshEndpoint: 'aws-ec2-dev'
+#           runOptions: 'inline'
+#           inline: 'cd vapp_docker/;docker pull siouxdocker/vapp_cms_dev:latest;docker-compose up -d --build cms 2> docker-compose-cms.log;docker system prune -f'
+#           readyTimeout: '20000'
