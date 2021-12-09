@@ -42,8 +42,10 @@ stages:
 
       - script: |
           pwd
+          cd /
+          pwd
           yarn --version
-          yarn code:check
+          yarn build
         
         displayName: Code check
 
